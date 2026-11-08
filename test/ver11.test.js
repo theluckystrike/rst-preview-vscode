@@ -69,3 +69,11 @@ test('Marketplace name zovo-rst-preview (rst-preview belongs to another publishe
   assert.match(src, /'zovo\.zovo-rst-preview'/);
   assert.doesNotMatch(src, /zovo\.rst-preview\b/);
 });
+
+test('deep indentation stays fast: 1,500 nested list levels (2 MB of indent) render in seconds, not minutes', () => {
+  const n = 1500;
+  const src = 'D\n=\n\n' + Array.from({ length: n }, (_, i) => '  '.repeat(i) + '- item ' + i + '\n\n').join('');
+  const [r, ms] = timed(() => renderRst(src));
+  assert.ok(ms < 3000, ms + ' ms');
+  assert.ok(r.warnings.some(w => /Nesting deeper than/.test(w.message)));
+});

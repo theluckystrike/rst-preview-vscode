@@ -17,7 +17,7 @@ const MAX_INCLUDE_TOTAL = 32 * 1024 * 1024; // included bytes per render (VER11)
 
 function toLines(text, f = 0) {
   const raw = String(text).replace(/^\ufeff/, '').split(/\r\n|\r|\n/);
-  return raw.map((t, n) => ({ t: expandTabs(t).replace(/\s+$/, ''), n, f }));
+  return raw.map((t, n) => ({ t: expandTabs(t).trimEnd(), n, f })); // trimEnd: /\s+$/ was quadratic on long indents (VER11)
 }
 function expandTabs(t) {
   if (t.indexOf('\t') < 0) return t;
@@ -571,7 +571,7 @@ class Parser {
     const f = ctx.files.length;
     ctx.files.push({ key: r.key, name: r.name, uri: r.uri, at: l.f === 0 ? l.n : ctx.files[l.f].at });
     if (d.name === 'literalinclude' || 'literal' in o || 'code' in o) {
-      out.push({ type: 'literal', text: lines.join('\n').replace(/\s+$/, ''), lang: d.name === 'literalinclude' ? (o.language || guessLang(target)) : (o.code || ''), options: o, line: l, caption: o.caption });
+      out.push({ type: 'literal', text: lines.join('\n').trimEnd(), lang: d.name === 'literalinclude' ? (o.language || guessLang(target)) : (o.code || ''), options: o, line: l, caption: o.caption });
       return;
     }
     ctx.includeStack.push(r.key);
