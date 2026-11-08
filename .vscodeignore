@@ -1,0 +1,15 @@
+src/**
+test/**
+scripts/**
+samples/**
+vendor/**
+node_modules/**
+**/*.map
+icon.svg
+.gitignore
+dist/*.vsix
+*.vsix
+package-lock.json
+.github/**
+images/**
+!images/readme-dark.png

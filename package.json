@@ -1,0 +1,297 @@
+{
+  "name": "rst-preview",
+  "displayName": "RST Preview & reStructuredText Preview (RST Viewer, No Python)",
+  "description": "RST preview and reStructuredText preview for VS Code with no Python, no Sphinx and no setup. Live preview with scroll sync, grid and list tables, admonitions, code colors, math, images, includes, outline and HTML export. Free, works offline.",
+  "version": "0.1.0",
+  "publisher": "zovo",
+  "license": "MIT",
+  "icon": "icon.png",
+  "galleryBanner": {
+    "color": "#1D2433",
+    "theme": "dark"
+  },
+  "engines": {
+    "vscode": "^1.90.0",
+    "node": ">=18"
+  },
+  "categories": [
+    "Programming Languages",
+    "Visualization",
+    "Other"
+  ],
+  "keywords": [
+    "rst",
+    "restructuredtext",
+    "rst preview",
+    "restructuredtext preview",
+    "rst viewer",
+    "sphinx",
+    "docutils",
+    "readme.rst",
+    "python docs",
+    "live preview",
+    "no python",
+    "offline"
+  ],
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "onLanguage:restructuredtext",
+    "onWebviewPanel:rstPreview.preview"
+  ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": true
+    },
+    "virtualWorkspaces": {
+      "supported": "limited",
+      "description": "Includes and local pictures are read only from files on disk."
+    }
+  },
+  "contributes": {
+    "languages": [
+      {
+        "id": "restructuredtext",
+        "aliases": [
+          "reStructuredText",
+          "RST",
+          "rst"
+        ],
+        "extensions": [
+          ".rst",
+          ".rest"
+        ]
+      }
+    ],
+    "commands": [
+      {
+        "command": "rstPreview.showPreviewToSide",
+        "title": "Open Preview to the Side",
+        "category": "RST Preview",
+        "icon": "$(open-preview)"
+      },
+      {
+        "command": "rstPreview.showPreview",
+        "title": "Open Preview",
+        "category": "RST Preview",
+        "icon": "$(preview)"
+      },
+      {
+        "command": "rstPreview.showSource",
+        "title": "Show Source",
+        "category": "RST Preview",
+        "icon": "$(go-to-file)"
+      },
+      {
+        "command": "rstPreview.exportHtml",
+        "title": "Export HTML",
+        "category": "RST Preview"
+      },
+      {
+        "command": "rstPreview.toggleStyle",
+        "title": "Switch Style (VS Code / GitHub)",
+        "category": "RST Preview"
+      },
+      {
+        "command": "rstPreview.openWalkthrough",
+        "title": "Get Started",
+        "category": "RST Preview"
+      },
+      {
+        "command": "rstPreview.supportDeveloper",
+        "title": "Support the developer",
+        "category": "RST Preview"
+      },
+      {
+        "command": "rstPreview.moreViewers",
+        "title": "More free viewers",
+        "category": "RST Preview"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "rstPreview.showPreview",
+        "key": "ctrl+shift+v",
+        "mac": "cmd+shift+v",
+        "when": "editorLangId == restructuredtext && !notebookEditorFocused"
+      },
+      {
+        "command": "rstPreview.showPreviewToSide",
+        "key": "ctrl+k v",
+        "mac": "cmd+k v",
+        "when": "editorLangId == restructuredtext && !notebookEditorFocused"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "rstPreview.showPreviewToSide",
+          "when": "editorLangId == restructuredtext || resourceExtname == .rst",
+          "group": "navigation"
+        },
+        {
+          "command": "rstPreview.showSource",
+          "when": "activeWebviewPanelId == rstPreview.preview",
+          "group": "navigation"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "rstPreview.showPreviewToSide",
+          "when": "resourceExtname == .rst || resourceExtname == .rest",
+          "group": "navigation@9"
+        }
+      ],
+      "editor/title/context": [
+        {
+          "command": "rstPreview.showPreviewToSide",
+          "when": "resourceExtname == .rst || resourceExtname == .rest",
+          "group": "1_open"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "rstPreview.showPreviewToSide",
+          "when": "editorLangId == restructuredtext || resourceExtname == .rst"
+        },
+        {
+          "command": "rstPreview.showPreview",
+          "when": "editorLangId == restructuredtext || resourceExtname == .rst"
+        },
+        {
+          "command": "rstPreview.showSource",
+          "when": "activeWebviewPanelId == rstPreview.preview"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "RST Preview",
+      "properties": {
+        "rstPreview.style": {
+          "type": "string",
+          "enum": [
+            "vscode",
+            "github"
+          ],
+          "enumDescriptions": [
+            "Colors and fonts of your VS Code theme",
+            "The look of a README.rst on GitHub, light or dark with your theme"
+          ],
+          "default": "vscode",
+          "description": "Look of the preview. The buttons in the preview toolbar change it too."
+        },
+        "rstPreview.scrollSync": {
+          "type": "boolean",
+          "default": true,
+          "description": "Scroll the preview with the editor, and the editor with the preview."
+        },
+        "rstPreview.updateDelayMs": {
+          "type": "number",
+          "default": 250,
+          "minimum": 0,
+          "maximum": 5000,
+          "description": "Wait this long after you stop typing before the preview renders again. Files over 100,000 characters wait a little longer."
+        },
+        "rstPreview.maxFileMB": {
+          "type": "number",
+          "default": 20,
+          "minimum": 1,
+          "maximum": 1024,
+          "description": "Files up to this size (in MB) render at once. A larger file shows a message with a Render anyway button. Included files are limited to 8 MB each."
+        },
+        "rstPreview.problems": {
+          "type": "string",
+          "enum": [
+            "warnings",
+            "all",
+            "off"
+          ],
+          "enumDescriptions": [
+            "Show syntax warnings and errors (for example a title underline that is too short)",
+            "Also show notes about unknown Sphinx roles and directives",
+            "Show nothing in the Problems panel"
+          ],
+          "default": "warnings",
+          "description": "What RST Preview reports in the Problems panel."
+        },
+        "rstPreview.fontSize": {
+          "type": "number",
+          "default": 0,
+          "minimum": 0,
+          "maximum": 40,
+          "description": "Font size of the preview in pixels. 0 uses 14 px."
+        },
+        "rstPreview.askForRating": {
+          "type": "boolean",
+          "default": true,
+          "description": "Ask one time for a Marketplace rating after you have used RST Preview on a few files on different days. You can answer \"Later\" or \"No thanks\". Nothing is sent anywhere."
+        },
+        "rstPreview.showSupportLinks": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show the small Sponsor and More free viewers links at the bottom of the preview. The change shows in previews you open next. Nothing is sent anywhere."
+        }
+      }
+    },
+    "walkthroughs": [
+      {
+        "id": "rstPreview.start",
+        "title": "Get started with RST Preview",
+        "description": "Preview reStructuredText in VS Code with no Python and no Sphinx.",
+        "steps": [
+          {
+            "id": "open",
+            "title": "Open the preview",
+            "description": "Open a .rst file and click the preview button at the top right of the editor, or press Ctrl+K V (Cmd+K V on a Mac).\n[Find a .rst file](command:workbench.action.quickOpen?%5B%22.rst%22%5D)",
+            "media": {
+              "image": "images/readme-dark.png",
+              "altText": "A README.rst open in the editor with RST Preview beside it."
+            },
+            "completionEvents": [
+              "onCommand:rstPreview.showPreviewToSide"
+            ]
+          },
+          {
+            "id": "write",
+            "title": "Type and see it update",
+            "description": "The preview updates as you type and scrolls with the editor. Double-click a paragraph in the preview to jump to its line. Warnings, such as a title underline that is too short, go to the Problems panel.",
+            "media": {
+              "markdown": "walkthrough/write.md"
+            }
+          },
+          {
+            "id": "export",
+            "title": "Outline, style and export",
+            "description": "Outline lists the sections. GitHub shows the README look. Export HTML saves one file with pictures and math inside.\n[Open settings](command:workbench.action.openSettings?%5B%22rstPreview%22%5D)",
+            "media": {
+              "markdown": "walkthrough/export.md"
+            },
+            "completionEvents": [
+              "onCommand:workbench.action.openSettings"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "node scripts/build.js --production",
+    "build": "node scripts/build.js --production",
+    "test": "node scripts/build.js --production && node --test test/*.test.js",
+    "package": "npx -y @vscode/vsce package --no-dependencies -o dist/"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2",
+    "@types/vscode": "~1.90.0"
+  },
+  "homepage": "https://github.com/theluckystrike/rst-preview-vscode#readme",
+  "bugs": {
+    "url": "https://github.com/theluckystrike/rst-preview-vscode/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/theluckystrike/rst-preview-vscode"
+  },
+  "sponsor": {
+    "url": "https://github.com/sponsors/theluckystrike"
+  }
+}

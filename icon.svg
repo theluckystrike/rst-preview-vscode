@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <rect width="128" height="128" rx="22" fill="#1D2433"/>
+  <rect x="14" y="18" width="46" height="92" rx="6" fill="#2A3346"/>
+  <path d="M22 32h30M22 40h30" stroke="#8B95A7" stroke-width="3" stroke-linecap="round"/>
+  <path d="M22 52h22M22 62h28M22 72h18M22 82h26M22 92h20" stroke="#5B6578" stroke-width="3" stroke-linecap="round"/>
+  <rect x="68" y="18" width="46" height="92" rx="6" fill="#F5F7FA"/>
+  <path d="M76 32h30" stroke="#1D2433" stroke-width="5" stroke-linecap="round"/>
+  <path d="M76 41h30" stroke="#3B82F6" stroke-width="2" stroke-linecap="round"/>
+  <rect x="76" y="50" width="30" height="16" rx="3" fill="#DBEAFE" stroke="#3B82F6" stroke-width="2"/>
+  <path d="M76 75h26M76 83h30M76 91h20" stroke="#64748B" stroke-width="3" stroke-linecap="round"/>
+  <text x="91" y="62" font-family="Helvetica, Arial, sans-serif" font-size="9" font-weight="700" fill="#1D4ED8" text-anchor="middle">NOTE</text>
+</svg>
