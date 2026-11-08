@@ -77,3 +77,10 @@ test('deep indentation stays fast: 1,500 nested list levels (2 MB of indent) ren
   assert.ok(ms < 3000, ms + ' ms');
   assert.ok(r.warnings.some(w => /Nesting deeper than/.test(w.message)));
 });
+
+test('rating: an empty document is not a success, a file too large to render is a failure (VER11)', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'src', 'extension.js'), 'utf8');
+  assert.match(src, /this\.lastEmpty = !text\.trim\(\);/);
+  assert.match(src, /m\.version === this\.version && !this\.lastEmpty\) \{ this\.counted = true; rating\.success\(\); \}/);
+  assert.match(src, /type: 'tooLarge'[^\n]*\n\s*if \(!this\.counted\) \{ this\.counted = true; rating\.failure\(\); \}/);
+});

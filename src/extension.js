@@ -92,6 +92,7 @@ class Preview {
     const text = doc.getText();
     if (!this.forceLarge && text.length > s.maxFileMB * 1048576) {
       this.post({ type: 'tooLarge', size: text.length, limitMB: s.maxFileMB, fileName: this.fileName });
+      if (!this.counted) { this.counted = true; rating.failure(); } // not shown: no rating ask after it (VER11)
       return;
     }
     const wv = this.panel.webview;
@@ -118,6 +119,7 @@ class Preview {
     });
     this.version++;
     this.lastGood = r;
+    this.lastEmpty = !text.trim(); // an empty document is not a success for the rating rule (VER11)
     this.manager.setProblems(doc, r.warnings, s.problems);
     const ed = vscode.window.visibleTextEditors.find(e => e.document.uri.toString() === this.key);
     const line = ed && ed.visibleRanges.length ? ed.visibleRanges[0].start.line : -1;
@@ -139,7 +141,7 @@ class Preview {
     switch (m.type) {
       case 'ready': this.ready = true; this.post({ type: 'init', style: this.style(), scrollSync: settings().scrollSync, uri: this.key }); this.schedule(0); break;
       case 'rendered':
-        if (!this.counted && m.version === this.version) { this.counted = true; rating.success(); }
+        if (!this.counted && m.version === this.version && !this.lastEmpty) { this.counted = true; rating.success(); }
         break;
       case 'renderAnyway': this.forceLarge = true; this.schedule(0); break;
       case 'style': if (m.style === 'github' || m.style === 'vscode') await this.manager.context.globalState.update(STYLE_KEY, m.style); break;
