@@ -15,7 +15,7 @@ const { registerSupport, commandUris, showLinks } = require('./support');
 
 const SECTION = 'rstPreview';
 const VIEW_TYPE = 'rstPreview.preview';
-const EXT_ID = 'zovo.rst-preview';
+const EXT_ID = 'zovo.zovo-rst-preview';
 const STYLE_KEY = 'rstPreview.style';
 let rating = { success() {}, failure() {} };
 

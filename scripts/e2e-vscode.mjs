@@ -315,7 +315,7 @@ if (process.env.GATE_RATING !== '0') {
   });
 }
 const ratingState = () => {
-  const out = execFileSync('sqlite3', [path.join(vs.ud, 'User', 'globalStorage', 'state.vscdb'), "select value from ItemTable where key = 'zovo.rst-preview'"], { encoding: 'utf8' });
+  const out = execFileSync('sqlite3', [path.join(vs.ud, 'User', 'globalStorage', 'state.vscdb'), "select value from ItemTable where key = 'zovo.zovo-rst-preview'"], { encoding: 'utf8' });
   return JSON.parse(out)['zovo.rating.v2'];
 };
 await vs.close();

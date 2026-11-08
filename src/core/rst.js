@@ -10,6 +10,8 @@ const { parseGrid, parseSimple, simpleTableEnd, parseCsv, SIMPLE_BORDER } = requ
 const MAX_DEPTH = 60;          // nesting of block quotes, lists and directives
 const MAX_INCLUDE_DEPTH = 5;
 const MAX_INCLUDE_BYTES = 8 * 1024 * 1024;
+const MAX_INCLUDES = 200; // included files per render (VER11)
+const MAX_INCLUDE_TOTAL = 32 * 1024 * 1024; // included bytes per render (VER11)
 
 // ---------------------------------------------------------------- lines
 
@@ -528,6 +530,19 @@ class Parser {
     out.push({ type: 'raw_html', html: d.content.map(x => x.t).join('\n'), line: d.line });
   }
 
+  /** All includes of one render share a budget, so a file that includes another one many times cannot fill memory. */
+  includeBudget(bytes, l, target, out) {
+    const ctx = this.ctx;
+    ctx.includeCount = (ctx.includeCount || 0) + 1; ctx.includeBytes = (ctx.includeBytes || 0) + bytes;
+    if (ctx.includeCount <= MAX_INCLUDES && ctx.includeBytes <= MAX_INCLUDE_TOTAL) return true;
+    if (!ctx.includeBudgetWarned) {
+      ctx.includeBudgetWarned = true;
+      this.warn(l, `Includes stopped: one preview reads at most ${MAX_INCLUDES} included files and ${MAX_INCLUDE_TOTAL >> 20} MB in all.`);
+      out.push({ type: 'notice', text: `Includes stopped at ${MAX_INCLUDES} files or ${MAX_INCLUDE_TOTAL >> 20} MB: ${target}`, line: l });
+    }
+    return false;
+  }
+
   include(d, out, depth, top) {
     const l = d.line;
     const ctx = this.ctx;
@@ -540,10 +555,12 @@ class Parser {
       return;
     }
     if (ctx.includeStack.length >= MAX_INCLUDE_DEPTH) { this.warn(l, `Include not read: more than ${MAX_INCLUDE_DEPTH} levels of nested includes ("${target}").`); out.push({ type: 'notice', text: `Include stopped at depth ${MAX_INCLUDE_DEPTH}: ${target}`, line: l }); return; }
+    if ((ctx.includeCount || 0) >= MAX_INCLUDES) { this.includeBudget(0, l, target, out); return; }
     const r = this.opts.readFile ? this.opts.readFile(target, ctx.files[l.f]) : { error: 'Includes are not available here.' };
     if (!r || r.error) { this.warn(l, `Include not read: ${r ? r.error : 'no reader'}`); out.push({ type: 'notice', text: `${d.name} ${target}: ${r ? r.error : 'not read'}`, line: l }); return; }
     if (ctx.includeStack.includes(r.key) || r.key === ctx.files[0].key) { this.warn(l, `Include cycle stopped: "${target}" is already being included.`); out.push({ type: 'notice', text: `Include cycle stopped: ${target}`, line: l }); return; }
     if (r.text.length > MAX_INCLUDE_BYTES) { this.warn(l, `Include not read: "${target}" is larger than 8 MB.`); return; }
+    if (!this.includeBudget(r.text.length, l, target, out)) return;
     let text = r.text;
     const o = d.options;
     if (o['start-after'] !== undefined) { const p = text.indexOf(o['start-after']); if (p >= 0) text = text.slice(p + o['start-after'].length); else this.warn(l, `Include: start-after text not found in "${target}".`); }
@@ -571,6 +588,7 @@ class Parser {
     if (o.file) {
       const r = this.opts.readFile ? this.opts.readFile(o.file, this.ctx.files[d.line.f]) : { error: 'not available' };
       if (!r || r.error) { this.warn(d.line, `csv-table file not read: ${r ? r.error : ''}`); out.push({ type: 'notice', text: `csv-table ${o.file}: ${r ? r.error : 'not read'}`, line: d.line }); return; }
+      if (!this.includeBudget(r.text.length, d.line, o.file, out)) return;
       text = r.text;
     } else text = d.content.map(x => x.t).join('\n');
     const delim = o.delim === 'tab' ? '\t' : o.delim === 'space' ? ' ' : (o.delim || ',').slice(0, 1);
@@ -605,7 +623,7 @@ function pickLines(lines, spec) {
     const m = /^\s*(\d*)\s*(-?)\s*(\d*)\s*$/.exec(part);
     if (!m) continue;
     const a = m[1] ? parseInt(m[1], 10) : 1, b = m[2] ? (m[3] ? parseInt(m[3], 10) : lines.length) : a;
-    for (let k = a; k <= b && k <= lines.length; k++) out.push(lines[k - 1]);
+    for (let k = a; k <= b && k <= lines.length && out.length < lines.length; k++) out.push(lines[k - 1]);
   }
   return out;
 }
@@ -650,11 +668,19 @@ function plainTitle(t) {
 function makeId(name, used) {
   let id = String(name).normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^[-0-9]+|-+$/g, '');
   if (!id) id = 'id';
-  let out = id, k = 1;
-  while (used.has(out)) out = `${id}-${k++}`;
+  let out = id;
+  if (used.has(out)) {
+    const next = used.nextNumber || (used.nextNumber = new Map());
+    let k = next.get(id) || 1;
+    do out = `${id}-${k++}`; while (used.has(out));
+    next.set(id, k);
+  }
   used.add(out);
   return out;
 }
+
+/** First item after index k that matches (no copy of the rest of the list). */
+function findAfter(list, k, pred) { for (let i = k + 1; i < list.length; i++) if (pred(list[i])) return list[i]; return undefined; }
 
 const SYMBOLS = ['*', '\u2020', '\u2021', '\u00a7', '\u00b6', '#', '\u2660', '\u2665', '\u2666', '\u2663'];
 
@@ -690,7 +716,7 @@ class Renderer {
             break;
           }
           case 'target': {
-            const chained = !n.url ? list.slice(k + 1).find(x => x.type !== 'comment') : null;
+            const chained = !n.url ? findAfter(list, k, x => x.type !== 'comment') : null;
             const chainUrl = chained && chained.type === 'target' && chained.url ? chained.url : '';
             if (n.anonymous) { this.anonTargets.push(n.url || chainUrl ? this.urlTarget(n.url || chainUrl) : { href: '#' + (n.id = makeId('anonymous', this.used)) }); break; }
             const key = normName(n.name);
@@ -699,7 +725,7 @@ class Renderer {
             else if (!n.url) {
               n.id = makeId(n.name, this.used);
               // A target just before a title points at that section (Sphinx :ref: uses the title text).
-              const next = list.slice(k + 1).find(x => x.type !== 'target' && x.type !== 'comment');
+              const next = findAfter(list, k, x => x.type !== 'target' && x.type !== 'comment');
               t = { href: '#' + n.id, title: next && next.type === 'title' ? plainTitle(next.text) : null };
               if (next && next.type === 'title') n.sectionTitle = next.text;
             } else if (/[^\\]_$/.test(n.url) && !/^[a-z][a-z0-9+.-]*:\/\//i.test(n.url)) t = { alias: normName(n.url.slice(0, -1).replace(/^`|`$/g, '')) };
@@ -782,6 +808,16 @@ class Renderer {
     this.subs.set(key, { html });
   }
 
+  /** Case-insensitive substitution name lookup through an index, rebuilt when definitions were added. */
+  subKeyLower(name) {
+    if (!this.subsLower || this.subsLowerSize !== this.subs.size) {
+      this.subsLower = new Map();
+      for (const k of this.subs.keys()) { const l = k.toLowerCase(); if (!this.subsLower.has(l)) this.subsLower.set(l, k); }
+      this.subsLowerSize = this.subs.size;
+    }
+    return this.subsLower.get(String(name).toLowerCase());
+  }
+
   resolveRef(name, depth = 0) {
     const t = this.targets.get(name);
     if (!t) return null;
@@ -795,7 +831,7 @@ class Renderer {
       warn: m => self.warn(m),
       ref: name => self.resolveRef(name),
       anon: () => { const t = self.anonTargets[self.anonIdx++]; return t ? t.href || null : null; },
-      sub: name => self.subs.get(name) || self.subs.get(Array.from(self.subs.keys()).find(k => k.toLowerCase() === name.toLowerCase())),
+      sub: name => self.subs.get(name) || self.subs.get(self.subKeyLower(name)),
       footnoteRef: label => self.footnoteRef(label),
       targetId: name => { const id = makeId(name, self.used); if (!self.targets.has(name)) self.targets.set(name, { href: '#' + id }); return id; },
       role: (name, body) => self.role(name, body),
@@ -844,10 +880,11 @@ class Renderer {
       case 'command': case 'program': case 'makevar': case 'mailheader': case 'regexp': case 'dfn': return name === 'dfn' ? `<dfn>${esc(text)}</dfn>` : `<strong class="${name}">${esc(text)}</strong>`;
       case 'guilabel': return `<span class="guilabel">${esc(text.replace(/&(?=\w)/, ''))}</span>`;
       case 'menuselection': return `<span class="menuselection">${esc(text.replace(/&(?=\w)/g, '')).replace(/--&gt;/g, '\u25b8')}</span>`;
-      case 'raw-html': case 'raw': return sanitizeHtml(text, { resolveSrc: src => this.resolveImage(src) }).html;
+      case 'raw-html': case 'raw': return sanitizeHtml(text, { resolveSrc: src => { const x = this.resolveImage(src); return x ? (x.src || x) : null; } }).html;
       case 'doc': {
         const { title, target } = titled();
-        const href = bare(target).replace(/\/$/, '') + (/\.\w+$/.test(target) ? '' : '.rst');
+        const href = safeHref(bare(target).replace(/\/$/, '') + (/\.\w+$/.test(target) ? '' : '.rst'));
+        if (!href) return esc(title || target);
         return `<a class="reference internal doc" href="${esc(href)}" data-doc="1">${esc(title || target)}</a>`;
       }
       case 'ref': {

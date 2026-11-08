@@ -1,5 +1,5 @@
 {
-  "name": "rst-preview",
+  "name": "zovo-rst-preview",
   "displayName": "RST Preview & reStructuredText Preview (RST Viewer, No Python)",
   "description": "RST preview and reStructuredText preview for VS Code with no Python, no Sphinx and no setup. Live preview with scroll sync, grid and list tables, admonitions, code colors, math, images, includes, outline and HTML export. Free, works offline.",
   "version": "0.1.0",
